@@ -1,0 +1,5 @@
+Flask==3.1.0
+Python=3.12.8
+torch==2.5.1+cu124
+torchvision==0.20.1+cu124
+Pillow==9.5.0
