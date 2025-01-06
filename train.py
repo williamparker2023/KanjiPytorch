@@ -20,16 +20,11 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485], std=[0.229]),
 ])
 
-start_time = time.time()
 
 # Create the dataset and dataloader
 dataset = KanjiDataset(ds, transform=transform)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=1028, shuffle=True, num_workers=12, pin_memory=True)
 
-end_time = time.time()
-
-
-print(f"Data loading took {end_time - start_time:.2f} seconds.")
 
 # Initialize the model
 model = KanjiModel(num_classes=3832)  # The number of classes corresponds to the number of Kanji characters
@@ -41,33 +36,41 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # Set the model to training mode
 model.train()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
+
+print(next(model.parameters()).device)
 
 
-# Number of epochs to train
-num_epochs = 10
+def train_model():
+    # Number of epochs to train
+    num_epochs = 10
 
-for epoch in range(num_epochs):
-    running_loss = 0.0
-    i=0
-    for images, labels in dataloader:
-        if i%10==0:
-            print(i)
-        if torch.cuda.is_available():
-            images, labels = images.cuda(), labels.cuda()
-            model.cuda()
+    for epoch in range(num_epochs):
+        running_loss = 0.0
+        i=0
+        for images, labels in dataloader:
+            if i%2==0:
+                print(i)
+            if torch.cuda.is_available():
+                images, labels = images.cuda(), labels.cuda()
+                model.cuda()
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        outputs = model(images)
-        loss = criterion(outputs, labels)
+            outputs = model(images)
+            loss = criterion(outputs, labels)
 
-        loss.backward()
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
 
-        running_loss += loss.item()
-        i+=1
+            running_loss += loss.item()
+            i+=1
 
-    print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(dataloader)}")
+        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(dataloader)}")
 
-# Save the model
-torch.save(model.state_dict(), 'kanji_model.pth')
+    # Save the model
+    torch.save(model.state_dict(), 'kanji_model.pth')
+
+if __name__ == '__main__':
+    train_model()
