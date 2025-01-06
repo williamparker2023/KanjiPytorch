@@ -3,10 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kanji Drawing Detector</title>
+    <title>Kanji Recognition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        
+        canvas {
+            border: 1px solid white;
+            cursor: crosshair;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .kanji-item {
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Kanji Drawing Detector</h1>
+    <h1>Draw Kanji</h1>
+    <canvas id="drawingCanvas" width="512" height="512"></canvas>
+    <button id="clearButton">Clear</button>
+    <div id="results" class="results-horizontal"></div>
 
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clearButton');
+        const resultsDiv = document.getElementById('results');
+        let isDrawing = false;
+
+        canvas.style.backgroundColor = 'black';
+
+  
+        ctx.strokeStyle = 'white';
+
+  
+        ctx.lineWidth = 15;
+
+        // Start drawing
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        // Draw while moving the mouse
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }
+        });
+
+        // Stop drawing
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            sendImageToBackend();
+        });
+
+        // Clear canvas
+        clearButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            resultsDiv.innerHTML = '';  // Clear previous results
+        });
+
+        function sendImageToBackend() {
+            // Convert canvas content to image (base64 PNG)
+            const canvasImage = canvas.toDataURL('image/png');
+
+            // Send to Flask backend using AJAX
+            fetch('/predict', {
+                method: 'POST',
+                body: JSON.stringify({ image: canvasImage }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the top 10 predictions
+                resultsDiv.innerHTML = '';
+                resultsDiv.classList.add('results-horizontal'); // Ensure horizontal layout is applied
+                data.predictions.forEach(kanji => {
+                    const kanjiItem = document.createElement('div');
+                    kanjiItem.classList.add('kanji-item');
+                    kanjiItem.textContent = kanji;
+                    resultsDiv.appendChild(kanjiItem);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
 </body>
 </html>

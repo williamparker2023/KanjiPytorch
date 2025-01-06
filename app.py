@@ -1,41 +1,64 @@
-from flask import Flask, render_template, request, jsonify
 import torch
-from torchvision import transforms
+from flask import Flask, render_template, request, jsonify
+from model import KanjiModel  # Replace with your model definition
 from PIL import Image
 import io
+import base64
+import json
+import numpy as np
+import torchvision.transforms as transforms
 
 app = Flask(__name__)
 
-# Load the pre-trained model
-model = torch.load('models/kanji_model.pth')  # Update with the actual model path
+# Load your model
+model = KanjiModel()  # Replace with your model class
+model.load_state_dict(torch.load("kanji_model.pth", weights_only=True))
 model.eval()
+
+with open("labelUnicode.json", "r") as f:
+    data = json.load(f)
+unicode_array = data["class_names"]
+
+if torch.cuda.is_available():
+    model.cuda()
+
+# Preprocess the image
+def preprocess_image(image_data):
+    transform = transforms.Compose([
+        transforms.Grayscale(num_output_channels=1),
+        transforms.Resize((64, 64)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5], std=[0.5]),
+    ])
+    
+    image = Image.open(io.BytesIO(image_data))
+    image = transform(image).unsqueeze(0)  # Add batch dimension
+    return image
+
 
 @app.route('/')
 def index():
-    return render_template('index.html')  # The homepage of your app
+    return render_template('index.html')
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if request.method == 'POST':
-        # Get the image from the form
-        file = request.files['image']
-        image = Image.open(file.stream)
+    data = request.get_json()
+    image_data = base64.b64decode(data['image'].split(',')[1])  # Extract image data from base64
+    image = preprocess_image(image_data)
 
-        # Preprocess the image
-        preprocess = transforms.Compose([
-            transforms.Resize(64),  # Resize image to match model input
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Example normalization
-        ])
-        image = preprocess(image).unsqueeze(0)
+    if torch.cuda.is_available():
+        image = image.cuda()
 
-        # Make the prediction
-        with torch.no_grad():
-            output = model(image)
-            _, predicted = torch.max(output, 1)
+    with torch.no_grad():
+        output = model(image)
+        _, top_indices = torch.topk(output, 10)  # Get the top 10 predictions
+        top_indices = top_indices[0].cpu().numpy()
 
-        # Return the prediction
-        return jsonify({'prediction': str(predicted.item())})
+    # Get the kanji characters for the top predictions
+    predictions = [chr(int(unicode_array[i][2:], 16)) for i in top_indices]
+
+    return jsonify({'predictions': predictions})
 
 if __name__ == '__main__':
     app.run(debug=True)
