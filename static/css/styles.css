@@ -42,12 +42,12 @@ body {
     justify-content: center;
     align-items: center;
     gap: 10px; /* Space between Kanji characters */
-    margin-top: 20px;
+    margin-top: 0px;
   }
   
   #prediction-results div {
-    font-size: 24px; /* Adjust font size for Kanji */
-    padding: 10px;
+    font-size: 36px; /* Adjust font size for Kanji */
+    padding: 0px;
     background-color: #fff;
     border: 1px solid #ddd;
     border-radius: 5px;

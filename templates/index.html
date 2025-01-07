@@ -8,7 +8,7 @@
     <style>
         
         canvas {
-            border: 1px solid white;
+            border: 3px solid white;
             cursor: crosshair;
         }
         #results {
@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <h1>Draw Kanji</h1>
+    <h1>Kanji Recognizer</h1>
     <canvas id="drawingCanvas" width="512" height="512"></canvas>
     <button id="clearButton">Clear</button>
     <div id="results" class="results-horizontal"></div>
@@ -31,22 +31,18 @@
         const clearButton = document.getElementById('clearButton');
         const resultsDiv = document.getElementById('results');
         let isDrawing = false;
-
+    
         canvas.style.backgroundColor = 'black';
-
-  
         ctx.strokeStyle = 'white';
-
-  
         ctx.lineWidth = 15;
-
+    
         // Start drawing
         canvas.addEventListener('mousedown', (e) => {
             isDrawing = true;
             ctx.beginPath();
             ctx.moveTo(e.offsetX, e.offsetY);
         });
-
+    
         // Draw while moving the mouse
         canvas.addEventListener('mousemove', (e) => {
             if (isDrawing) {
@@ -54,23 +50,23 @@
                 ctx.stroke();
             }
         });
-
+    
         // Stop drawing
         canvas.addEventListener('mouseup', () => {
             isDrawing = false;
             sendImageToBackend();
         });
-
+    
         // Clear canvas
         clearButton.addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             resultsDiv.innerHTML = '';  // Clear previous results
         });
-
+    
         function sendImageToBackend() {
             // Convert canvas content to image (base64 PNG)
             const canvasImage = canvas.toDataURL('image/png');
-
+    
             // Send to Flask backend using AJAX
             fetch('/predict', {
                 method: 'POST',
@@ -88,11 +84,19 @@
                     const kanjiItem = document.createElement('div');
                     kanjiItem.classList.add('kanji-item');
                     kanjiItem.textContent = kanji;
+    
+                    // Add click event to the div
+                    kanjiItem.addEventListener('click', () => {
+                        const url = `https://jisho.org/search/${encodeURIComponent(kanji)}%20%23kanji`;
+                        window.open(url, '_blank');
+                    });
+    
                     resultsDiv.appendChild(kanjiItem);
                 });
             })
             .catch(error => console.error('Error:', error));
         }
     </script>
+    
 </body>
 </html>

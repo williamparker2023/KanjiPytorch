@@ -31,7 +31,7 @@ def preprocess_image(image_path):
     return image
 
 # Predict Kanji
-image_path = "black.png"  # Replace with your image path
+image_path = "bruhRain.png"  # Replace with your image path
 image = preprocess_image(image_path)
 
 if torch.cuda.is_available():
